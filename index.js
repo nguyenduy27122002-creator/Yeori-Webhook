@@ -1,48 +1,69 @@
 const express = require("express");
 const app = express();
 
+// Parse JSON body
 app.use(express.json());
 
-// Health check (Zalo + Render test sống/chết)
+// =========================
+// HEALTH CHECK
+// =========================
 app.get("/", (req, res) => {
-  res.status(200).send("Zalo Webhook is running OK");
+  res.status(200).send("Zalo Mini App Webhook is running OK");
 });
 
-// Webhook chính
+// =========================
+// WEBHOOK ENDPOINT
+// =========================
 app.post("/webhook", (req, res) => {
   try {
-    // Log toàn bộ request từ Zalo
-    console.log("=== ZALO WEBHOOK HIT ===");
+    console.log("=== ZALO WEBHOOK RECEIVED ===");
     console.log("Headers:", req.headers);
     console.log("Body:", JSON.stringify(req.body, null, 2));
 
-    // LUÔN trả 200 nhanh (quan trọng nhất khi xét duyệt)
+    const event = req.body?.event_name;
+
+    // =========================
+    // HANDLE EVENTS (MINI APP / OA)
+    // =========================
+    switch (event) {
+
+      case "app.review":
+        console.log("📌 App Review Event:");
+        console.log("App ID:", req.body.app_id);
+        console.log("Status:", req.body.status); // approved / rejected
+        break;
+
+      case "user.delete_data":
+        console.log("🗑 User delete request:");
+        console.log("User ID:", req.body.user_id);
+        break;
+
+      default:
+        console.log("ℹ Unknown event:", event);
+    }
+
+    // =========================
+    // ALWAYS RETURN 200
+    // =========================
     return res.status(200).json({
       error: 0,
-      message: "success",
-      timestamp: Date.now()
+      message: "success"
     });
 
   } catch (error) {
     console.error("Webhook error:", error);
 
-    // Vẫn phải trả 200 để tránh Zalo retry fail liên tục
+    // Vẫn trả 200 để tránh Zalo retry fail
     return res.status(200).json({
-      error: 1,
+      error: 0,
       message: "handled error"
     });
   }
 });
 
-// Handle route không tồn tại (tránh Zalo gọi nhầm bị 404)
-app.use((req, res) => {
-  res.status(404).json({
-    error: 404,
-    message: "Not found"
-  });
-});
-
-// Port chuẩn Render
+// =========================
+// START SERVER (RENDER READY)
+// =========================
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
