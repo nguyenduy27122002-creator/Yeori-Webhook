@@ -1,71 +1,123 @@
 const express = require("express");
+const axios = require("axios");
+
 const app = express();
 
-// Parse JSON body
 app.use(express.json());
 
-// =========================
-// HEALTH CHECK
-// =========================
+/* ===========================================
+   TRANG CHỦ
+=========================================== */
+
 app.get("/", (req, res) => {
-  res.status(200).send("Zalo Mini App Webhook is running OK");
+  res.send("✅ Yeori Webhook đang hoạt động");
 });
 
-// =========================
-// WEBHOOK ENDPOINT
-// =========================
+/* ===========================================
+   HEALTH CHECK
+=========================================== */
+
+app.get("/health", (req, res) => {
+  res.json({
+    success: true,
+    message: "Server Running",
+    time: new Date()
+  });
+});
+
+/* ===========================================
+   WEBHOOK ZALO
+=========================================== */
+
 app.post("/webhook", (req, res) => {
+
+  console.log("========== WEBHOOK ==========");
+
+  console.log(req.body);
+
+  res.json({
+    error: 0,
+    message: "success"
+  });
+
+});
+
+/* ===========================================
+   API LƯU USER
+=========================================== */
+
+app.post("/api/save-user", async (req, res) => {
+
   try {
-    console.log("=== ZALO WEBHOOK RECEIVED ===");
-    console.log("Headers:", req.headers);
-    console.log("Body:", JSON.stringify(req.body, null, 2));
 
-    const event = req.body?.event_name;
+    const data = req.body;
 
-    // =========================
-    // HANDLE EVENTS (MINI APP / OA)
-    // =========================
-    switch (event) {
+    console.log("USER DATA:");
 
-      case "app.review":
-        console.log("📌 App Review Event:");
-        console.log("App ID:", req.body.app_id);
-        console.log("Status:", req.body.status); // approved / rejected
-        break;
+    console.log(data);
 
-      case "user.delete_data":
-        console.log("🗑 User delete request:");
-        console.log("User ID:", req.body.user_id);
-        break;
+    const sheetAPI =
+      "https://script.google.com/macros/s/AKfycbw1JX5HMvxRU6pZYucWruZPWXicAkt1B6wzvrI9NxsVoX4ntRObbrsh6DT-ms_HHD-E0w/exec";
 
-      default:
-        console.log("ℹ Unknown event:", event);
-    }
+    const result = await axios.post(
+      sheetAPI,
+      data
+    );
 
-    // =========================
-    // ALWAYS RETURN 200
-    // =========================
-    return res.status(200).json({
-      error: 0,
-      message: "success"
+    res.json({
+      success: true,
+      message: "Đã lưu Google Sheet",
+      data: result.data
     });
 
   } catch (error) {
-    console.error("Webhook error:", error);
 
-    // Vẫn trả 200 để tránh Zalo retry fail
-    return res.status(200).json({
-      error: 0,
-      message: "handled error"
+    console.log(error);
+
+    res.status(500).json({
+
+      success: false,
+
+      message: error.message
+
     });
+
   }
+
 });
 
-// =========================
-// START SERVER (RENDER READY)
-// =========================
+/* ===========================================
+   TEST API
+=========================================== */
+
+app.post("/api/test", (req, res) => {
+
+  console.log(req.body);
+
+  res.json({
+
+    success: true,
+
+    data: req.body
+
+  });
+
+});
+
+/* ===========================================
+   PORT
+=========================================== */
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log("🚀 Server running on port", PORT);
+
+  console.log("================================");
+
+  console.log("YEORI WEBHOOK RUNNING");
+
+  console.log("PORT:", PORT);
+
+  console.log("================================");
+
 });
